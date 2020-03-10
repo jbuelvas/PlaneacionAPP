@@ -22,6 +22,7 @@
     <!-- arcgis online portal url -->
     <string name="portal_url">https://barranquilla.maps.arcgis.com/</string>
     <string name="obra_service_url">https://services3.arcgis.com/oGYAc07w6wsvgUYr/arcgis/rest/services/MAPA_OBRAS_WFL1/FeatureServer/0</string>
+    <string name="hitos_service_url">https://services3.arcgis.com/oGYAc07w6wsvgUYr/ArcGIS/rest/services/TabControlObras/FeatureServer/1</string>
     <!-- webmap portal item id's -->
     <string name="webmap_licencias_id">493bc0cc42204645a12b50092bbbfd22</string>
     <string name="license_key">runtimelite,1000,rud7969711426,none,B5H93PJPXLK5003AD174</string>
