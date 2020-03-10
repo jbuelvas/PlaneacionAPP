@@ -2,6 +2,8 @@ package com.example.planeacionapp;
 
 import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -11,22 +13,45 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.AdapterView;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TabHost;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.esri.arcgisruntime.data.Feature;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 
+/**
+ * Clase RegistrarHitoActivity
+ *
+ * Clase que registra un hito de una obra
+ * @author Jaime Buelvas
+ * @version: 1.0
+ */
 public class RegistrarHitoActivity extends DialogFragment implements AdapterView.OnItemSelectedListener, View.OnClickListener {
     public static final String TAG = RegistrarHitoActivity.class.getSimpleName();
 
     private View mView;
     private ProgressDialog mProgressDialog;
     private TabHost mTabs;
+
+    //Button
+    private Button btnGuardar;
+
+    //EditText
+    EditText txtHito;
+
+    Context mContext;
+
+    //Clases
+    private Utilidades util;
 
     private String strNombre = "";
     private String strDescripcion = "";
@@ -68,6 +93,7 @@ public class RegistrarHitoActivity extends DialogFragment implements AdapterView
         mDivider.setBackgroundColor(Color.parseColor(Constantes.COLOR_TITULO_MENSAJES));
 
         mProgressDialog = new ProgressDialog(this.getContext());
+        mContext = this.getContext();
 
         TextView txtNombre = mView.findViewById(R.id.txt_nombre);
         txtNombre.setText(strNombre);
@@ -78,13 +104,18 @@ public class RegistrarHitoActivity extends DialogFragment implements AdapterView
         TextView txtEstado = mView.findViewById(R.id.txt_estado);
         txtEstado.setText(strEstado);
 
+        txtHito = (EditText) mView.findViewById(R.id.txt_hito);
+
         this.cargarTabs();
+        this.cargarBotones();
 
         return mView;
     }
 
     /**
-     *
+     * Método que inicializa los tabs del formulario
+     * @param
+     * @return
      */
     private void cargarTabs() {
         Resources res = getResources();
@@ -105,6 +136,54 @@ public class RegistrarHitoActivity extends DialogFragment implements AdapterView
         mTabs.addTab(spec);
 
         mTabs.setCurrentTab(0);
+    }
+
+    /**
+     * Método que inicializa los botones del formulario
+     * @param
+     * @return
+     */
+    private void cargarBotones() {
+        btnGuardar = (Button) mView.findViewById(R.id.btn_guardar);
+        btnGuardar.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View arg0)
+            {
+                try
+                {
+
+                    System.out.println(txtHito.getText().toString());
+                    if(txtHito.getText().toString().equalsIgnoreCase("")){
+                        System.out.println("Hito1");
+                        new AlertDialog.Builder(mContext)
+                                .setIcon(android.R.drawable.ic_dialog_alert)
+                                .setTitle("Advertencia")
+                                .setMessage("Digitar el hito de la obra.")
+                                .setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialogInterface, int i) {
+                                        //finish();
+                                    }
+                                })
+                                /*.setNegativeButton("No", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialogInterface, int i) {
+                                        //Toast.makeText(getApplicationContext(),"Nothing Happens",Toast.LENGTH_LONG).show();
+                                    }
+                                })*/
+                                .show();
+                    }
+                    else
+                    {
+                        System.out.println("Hito2");
+                    }
+                }
+                catch(Exception ex){
+                    String msg = ex.getMessage();
+                }
+            }
+        });
     }
 
     @Override

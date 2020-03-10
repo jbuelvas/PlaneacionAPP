@@ -170,7 +170,7 @@
                             <View android:layout_height="10dp" android:layout_width="1dp" />
 
                             <Button
-                                android:id="@+id/btn_buscar_fase"
+                                android:id="@+id/btn_guardar"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:background="@color/colorPrimary"
