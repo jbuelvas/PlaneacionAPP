@@ -1,7 +1,9 @@
 package com.example.planeacionapp;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.graphics.Color;
 import android.os.Bundle;
 
@@ -61,6 +63,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import android.view.Menu;
 import android.widget.LinearLayout;
+import android.widget.TabHost;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -90,21 +93,26 @@ public class MainActivity extends AppCompatActivity {
     LayoutInflater mInflater;
     private LocationDisplay mLocationDisplay;
 
-    public FloatingActionButton getmFabResultados() {
-        return mFabResultados;
-    }
+    private GraphicsOverlay geodesicGraphicsOverlay = null;
 
     private FloatingActionButton mFabResultados;
-
-    public GraphicsOverlay getGeodesicGraphicsOverlay() {
-        return geodesicGraphicsOverlay;
-    }
-
-    private GraphicsOverlay geodesicGraphicsOverlay = null;
+    private FloatingActionButton mFabRegistrarHito;
 
     private int requestCode = 2;
     String[] reqPermissions = new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission
             .ACCESS_COARSE_LOCATION};
+
+    public FloatingActionButton getmFabRegistrarHito() {
+        return mFabRegistrarHito;
+    }
+
+    public FloatingActionButton getmFabResultados() {
+        return mFabResultados;
+    }
+
+    public GraphicsOverlay getGeodesicGraphicsOverlay() {
+        return geodesicGraphicsOverlay;
+    }
 
     public ArcGISMap getmMap() {
         return mMap;
@@ -124,6 +132,7 @@ public class MainActivity extends AppCompatActivity {
 
     String[] mResultados = {"300 mts","500 mts","1.000 mts"};
     Feature[] mFeatures;
+    Feature mFeatureProyecto;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -319,6 +328,15 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        mFabRegistrarHito = findViewById(R.id.registrar_hito);
+        mFabRegistrarHito.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                RegistrarHitoActivity activity = new RegistrarHitoActivity(mFeatureProyecto);
+                activity.show(getSupportFragmentManager(), RegistrarHitoActivity.TAG);
+            }
+        });
+
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -338,20 +356,6 @@ public class MainActivity extends AppCompatActivity {
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment);
         NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
         NavigationUI.setupWithNavController(navigationView, navController);
-    }
-
-    private void setupMap() {
-        System.out.println("setupMap");
-        if (mMapView != null) {
-            System.out.println("entra");
-            // get the portal url for ArcGIS Online
-            mPortal = new Portal(getResources().getString(R.string.portal_url));
-            // get the pre-defined portal id and portal url
-            mPortalItem = new PortalItem(mPortal, getResources().getString(R.string.webmap_licencias_id));
-            // create a map from a PortalItem
-            mMap = new ArcGISMap(mPortalItem);
-            mMapView.setMap(mMap);
-        }
     }
 
     /*
@@ -375,7 +379,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 try {
-                    // call get on the future to get the result
+                    // call get on the future to get the result Map<String, Object>
                     IdentifyLayerResult layerResult = identifyFuture.get();
                     List<GeoElement> resultGeoElements = layerResult.getElements();
                     if (!resultGeoElements.isEmpty()) {
@@ -473,6 +477,12 @@ public class MainActivity extends AppCompatActivity {
 
         mFeatures = new Feature[features.length];
         mFeatures = features;
+    }
+
+    @SuppressLint("RestrictedApi")
+    public void setProyecto(Feature feature){
+        mFeatureProyecto = feature;
+        this.getmFabRegistrarHito().setVisibility(View.VISIBLE);
     }
 
     @Override

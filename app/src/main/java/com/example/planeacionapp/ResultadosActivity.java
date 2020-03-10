@@ -43,12 +43,14 @@ public class ResultadosActivity extends DialogFragment implements AdapterView.On
         listView1.setAdapter(adapter);
 
         listView1.setOnItemClickListener(new AdapterView.OnItemClickListener(){
+            @SuppressLint("RestrictedApi")
             @Override
             public void onItemClick(AdapterView<?> parent, View v, int pos, long id)
             {
                 Feature feat = mFeatures[pos];
                 ((MainActivity) getActivity()).getmCallout().dismiss();
                 ((MainActivity)getActivity()).getmMapView().setViewpointGeometryAsync(feat.getGeometry().getExtent(), 10);
+                ((MainActivity)getActivity()).setProyecto(feat);
                 dismiss();
             }
         });

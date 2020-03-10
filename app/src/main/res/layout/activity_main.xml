@@ -27,6 +27,17 @@
         android:paddingTop="55dp">
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/registrar_hito"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_marginBottom="80dp"
+            android:layout_marginRight="@dimen/fab_margin"
+            android:visibility="gone"
+            app:backgroundTint="#4CAF50"
+            app:srcCompat="@mipmap/ic_edit_64" />
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/resultados"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
