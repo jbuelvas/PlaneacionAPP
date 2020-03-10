@@ -1,0 +1,28 @@
+<resources>
+    <string name="app_name">PlaneacionAPP</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="nav_header_title">App B@Q</string>
+    <string name="nav_header_subtitle">Alcaldía de Barranquilla</string>
+    <string name="nav_header_desc">Navigation header</string>
+    <string name="action_settings">Configuración</string>
+    <string name="nav_header_version">V 0.0.2</string>
+
+    <string name="menu_home">App B@Q</string>
+    <string name="menu_gallery">App B@Q</string>
+    <string name="menu_slideshow">App B@Q</string>
+    <string name="menu_tools">App B@Q</string>
+    <string name="menu_share">App B@Q</string>
+    <string name="menu_send">App B@Q</string>
+
+    <string name="menu_fase">Fases</string>
+    <string name="menu_estado">Estado</string>
+    <string name="menu_cerca">Cerca de mí</string>
+
+    <!-- arcgis online portal url -->
+    <string name="portal_url">https://barranquilla.maps.arcgis.com/</string>
+    <string name="obra_service_url">https://services3.arcgis.com/oGYAc07w6wsvgUYr/arcgis/rest/services/MAPA_OBRAS_WFL1/FeatureServer/0</string>
+    <!-- webmap portal item id's -->
+    <string name="webmap_licencias_id">493bc0cc42204645a12b50092bbbfd22</string>
+    <string name="license_key">runtimelite,1000,rud7969711426,none,B5H93PJPXLK5003AD174</string>
+</resources>
