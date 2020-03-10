@@ -67,6 +67,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical">
 
+
                         <!-- Hito -->
                         <LinearLayout
                             android:layout_width="fill_parent"
