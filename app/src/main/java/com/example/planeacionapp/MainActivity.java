@@ -67,8 +67,11 @@ import android.widget.TabHost;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = MainActivity.class.getSimpleName();
@@ -97,6 +100,7 @@ public class MainActivity extends AppCompatActivity {
 
     private FloatingActionButton mFabResultados;
     private FloatingActionButton mFabRegistrarHito;
+    private Feature mFeatureProyecto;
 
     private int requestCode = 2;
     String[] reqPermissions = new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission
@@ -130,9 +134,12 @@ public class MainActivity extends AppCompatActivity {
         return mCallout;
     }
 
+    public Feature getmFeatureProyecto() {
+        return mFeatureProyecto;
+    }
+
     String[] mResultados = {"300 mts","500 mts","1.000 mts"};
     Feature[] mFeatures;
-    Feature mFeatureProyecto;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -471,12 +478,49 @@ public class MainActivity extends AppCompatActivity {
         mCallout.show();
     }
 
-    public void setResultados(String[] resultados, Feature[] features){
-        mResultados = new String[resultados.length];
-        mResultados = resultados;
-
+    public void setResultados(Feature[] features){
         mFeatures = new Feature[features.length];
         mFeatures = features;
+
+        //if(bankAccNos.contains(bakAccNo))
+
+        ArrayList<String> listaResultados = new ArrayList<String>();
+        String reg = "";
+
+        ArrayList<String> listaCamposNoVisibles = new ArrayList<String>();
+        listaCamposNoVisibles.add("Shape__Area");
+        listaCamposNoVisibles.add("Shape__Length");
+        listaCamposNoVisibles.add("OBJECTID");
+        listaCamposNoVisibles.add("Dependencia");
+        listaCamposNoVisibles.add("DireccionProyecto");
+        listaCamposNoVisibles.add("ID_Obra_1");
+        listaCamposNoVisibles.add("ID_Sector");
+        listaCamposNoVisibles.add("Programa");
+        listaCamposNoVisibles.add("ObjProyecto");
+        listaCamposNoVisibles.add("DurProyecto");
+        listaCamposNoVisibles.add("Responsable");
+        listaCamposNoVisibles.add("Dependencia");
+        listaCamposNoVisibles.add("Nombre_Contratista");
+        listaCamposNoVisibles.add("ID_Localidad");
+        listaCamposNoVisibles.add("Intervencion");
+
+        for (Feature feat : features) {
+            // create a Map of all available attributes as name value pairs
+            Map<String, Object> attr = feat.getAttributes();
+            Set<String> keys = attr.keySet();
+            reg = "";
+
+            for (String key : keys) {
+                Object value = attr.get(key);
+
+                if(!listaCamposNoVisibles.contains(key)){
+                    reg += key + ": " + value + "\n";
+                }
+            }
+            listaResultados.add(reg);
+        }
+
+        mResultados = (String[]) listaResultados.toArray(new String[listaResultados.size()]);
     }
 
     @SuppressLint("RestrictedApi")

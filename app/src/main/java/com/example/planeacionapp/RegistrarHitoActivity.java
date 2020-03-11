@@ -8,6 +8,7 @@ import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,14 +20,22 @@ import android.widget.TabHost;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.esri.arcgisruntime.ArcGISRuntimeException;
 import com.esri.arcgisruntime.concurrent.ListenableFuture;
+import com.esri.arcgisruntime.data.ArcGISFeature;
 import com.esri.arcgisruntime.data.Feature;
+import com.esri.arcgisruntime.data.FeatureEditResult;
 import com.esri.arcgisruntime.data.ServiceFeatureTable;
+import com.esri.arcgisruntime.geometry.Point;
+import com.esri.arcgisruntime.mapping.GeoElement;
+import com.esri.arcgisruntime.mapping.view.IdentifyLayerResult;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
@@ -189,9 +198,13 @@ public class RegistrarHitoActivity extends DialogFragment implements AdapterView
                         // create the attributes for the feature
                         java.util.Map<String, Object> attributes = new HashMap<String, Object>();
 
-                        attributes.put("ID_Obra", idObra);
+                        attributes.put("ID_Obra", Double.parseDouble(idObra));
                         attributes.put("HITO", txtHito.getText().toString());
-                        attributes.put("Date", new Date());
+                        attributes.put("Date", "11/03/2020");
+
+                        System.out.println("* * * * " + Double.parseDouble(idObra));
+                        System.out.println("* * * * " + txtHito.getText().toString());
+                        System.out.println("* * * * " + "11/03/2020");
 
                         addFeature(attributes);
                     }
@@ -203,18 +216,34 @@ public class RegistrarHitoActivity extends DialogFragment implements AdapterView
         });
     }
 
+    private void applyEdits(ServiceFeatureTable featureTable){
+        System.out.println("* * *  ok ");
+    }
+
     /**
      *
      * @param attributes
      */
     private void addFeature(java.util.Map<String, Object> attributes) {
-        mProgressDialog.setMessage("Guardando encuesta...");
+        mProgressDialog.setMessage("Guardando hito...");
         mProgressDialog.show();
 
+        System.out.println("* * *  1 ");
         ServiceFeatureTable serviceFeatureTableHitos = new ServiceFeatureTable(getString(R.string.hitos_service_url));
+        System.out.println("* * *  2 ");
+        System.out.println("* * *  canAdd " + serviceFeatureTableHitos.canAdd());
         // Create a new feature from the attributes and an existing point geometry, and then add the feature
-        //Feature addedFeature = serviceFeatureTableHitos.createFeature(attributes);
-        //final ListenableFuture<Void> addFeatureFuture = serviceFeatureTableHitos.addFeatureAsync(addedFeature);
+        try {
+            Feature addedFeature = serviceFeatureTableHitos.createFeature(attributes, ((MainActivity)getActivity()).getmFeatureProyecto().getGeometry());
+            System.out.println("* * *  3 ");
+            serviceFeatureTableHitos.addFeatureAsync(addedFeature).addDoneListener(() -> applyEdits(serviceFeatureTableHitos));
+            System.out.println("* * *  4 ");
+            final ListenableFuture<Void> addFeatureFuture = serviceFeatureTableHitos.addFeatureAsync(addedFeature);
+        }
+        catch(Exception exc){
+            System.out.println("* * *  error " + exc.getMessage());
+        }
+
     }
 
     @Override

@@ -145,7 +145,6 @@ public class LocacionActivity extends DialogFragment implements AdapterView.OnIt
                             // add done loading listener to fire when the selection returns
                             featureQueryResultFuture.addDoneListener(() -> {
                                 try {
-                                    ArrayList<String> listaResultados = new ArrayList<String>();
                                     ArrayList<Feature> listaFeatures = new ArrayList<Feature>();
                                     // call get on the future to get the result
                                     FeatureQueryResult featureQueryResult = featureQueryResultFuture.get();
@@ -157,28 +156,12 @@ public class LocacionActivity extends DialogFragment implements AdapterView.OnIt
                                     while (iterator.hasNext()) {
                                         feature = iterator.next();
                                         counter++;
-                                        String reg = "";
-
-                                        // create a Map of all available attributes as name value pairs
-                                        Map<String, Object> attr = feature.getAttributes();
-                                        Set<String> keys = attr.keySet();
-                                        for (String key : keys) {
-                                            Object value = attr.get(key);
-                                            if(!key.equalsIgnoreCase("Shape__Area") &&
-                                                    !key.equalsIgnoreCase("Shape__Length") &&
-                                                    !key.equalsIgnoreCase("OBJECTID") &&
-                                                    !key.equalsIgnoreCase("Dependencia")){
-                                                reg += key + ": " + value + "\n";
-                                            }
-                                        }
-                                        listaResultados.add(reg);
                                         listaFeatures.add(feature);
                                         Log.d(TAG, "Selection #: " + counter + " Table name: " + feature.getFeatureTable().getTableName());
                                     }
-                                    String[] resultados = (String[]) listaResultados.toArray(new String[listaResultados.size()]);
                                     Feature[] features = (Feature[]) listaFeatures.toArray(new Feature[listaFeatures.size()]);
 
-                                    mainActivity.setResultados(resultados, features);
+                                    mainActivity.setResultados(features);
                                     Toast.makeText(mContext, counter + " registros encontrados", Toast.LENGTH_SHORT).show();
 
                                     if(counter == 0){

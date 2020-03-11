@@ -13,6 +13,9 @@ import androidx.fragment.app.DialogFragment;
 
 import com.esri.arcgisruntime.data.Feature;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+
 public class ResultadosActivity extends DialogFragment implements AdapterView.OnItemSelectedListener, View.OnClickListener {
     public static final String TAG = ResultadosActivity.class.getSimpleName();
 
@@ -35,14 +38,16 @@ public class ResultadosActivity extends DialogFragment implements AdapterView.On
     {
         mView = inflater.inflate(R.layout.form_resultados, container);
 
-        ListView listView1 = (ListView) mView.findViewById(R.id.listaResultados);
+        ListView lvResultado = (ListView) mView.findViewById(R.id.listaResultados);
+        ArrayList<Feature> listaFeatures  = new ArrayList<Feature>(Arrays.asList(mFeatures));
 
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this.getContext(),
-                android.R.layout.simple_list_item_1, mResultados);
+        ResultadosListAdapter adapter = new ResultadosListAdapter(mView.getContext(), listaFeatures);
+        lvResultado.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
+        lvResultado.setAdapter(adapter);
 
-        listView1.setAdapter(adapter);
+        //ArrayAdapter<String> adapter = new ArrayAdapter<String>(this.getContext(), android.R.layout.simple_list_item_1, mResultados);
 
-        listView1.setOnItemClickListener(new AdapterView.OnItemClickListener(){
+        lvResultado.setOnItemClickListener(new AdapterView.OnItemClickListener(){
             @SuppressLint("RestrictedApi")
             @Override
             public void onItemClick(AdapterView<?> parent, View v, int pos, long id)

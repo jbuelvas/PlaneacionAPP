@@ -106,7 +106,6 @@ public class FaseActivity extends DialogFragment implements AdapterView.OnItemSe
                 future.addDoneListener(() -> {
                     try {
                         int contador = 0;
-                        ArrayList<String> listaResultados = new ArrayList<String>();
                         ArrayList<Feature> listaFeatures = new ArrayList<Feature>();
                         // call get on the future to get the result
                         FeatureQueryResult result = future.get();
@@ -119,27 +118,11 @@ public class FaseActivity extends DialogFragment implements AdapterView.OnItemSe
                                 contador++;
                                 feature = resultIterator.next();
                                 envelope = feature.getGeometry().getExtent();
-                                String reg = "";
-
-                                // create a Map of all available attributes as name value pairs
-                                Map<String, Object> attr = feature.getAttributes();
-                                Set<String> keys = attr.keySet();
-                                for (String key : keys) {
-                                    Object value = attr.get(key);
-                                    if(!key.equalsIgnoreCase("Shape__Area") &&
-                                            !key.equalsIgnoreCase("Shape__Length") &&
-                                            !key.equalsIgnoreCase("OBJECTID") &&
-                                            !key.equalsIgnoreCase("Dependencia")){
-                                        reg += key + ": " + value + "\n";
-                                    }
-                                }
-                                listaResultados.add(reg);
                                 listaFeatures.add(feature);
                             }
-                            String[] resultados = (String[]) listaResultados.toArray(new String[listaResultados.size()]);
                             Feature[] features = (Feature[]) listaFeatures.toArray(new Feature[listaFeatures.size()]);
 
-                            ((MainActivity)getActivity()).setResultados(resultados, features);
+                            ((MainActivity)getActivity()).setResultados(features);
                             ((MainActivity)getActivity()).getmFabResultados().setVisibility(View.VISIBLE);
                             ((MainActivity)getActivity()).getmMapView().setViewpointGeometryAsync(((MainActivity)getActivity()).getmFeatureLayerObra().getFullExtent(), 10);
 
