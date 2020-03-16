@@ -97,6 +97,9 @@ public class EstadoActivity extends DialogFragment implements AdapterView.OnItem
                 QueryParameters query = new QueryParameters();
                 // make search case insensitive
                 query.setWhereClause(consulta);
+                QueryParameters.OrderBy orderBy = new QueryParameters.OrderBy("Nom_Proyecto".trim(), QueryParameters.SortOrder.ASCENDING);
+                query.getOrderByFields().add(orderBy);
+
                 if(valorEstado == "0"){
                     query.setWhereClause("1=1");
                 }

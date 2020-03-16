@@ -139,6 +139,8 @@ public class LocacionActivity extends DialogFragment implements AdapterView.OnIt
 
                             QueryParameters query = new QueryParameters();
                             query.setGeometry(mainActivity.getGeodesicGraphicsOverlay().getExtent());
+                            QueryParameters.OrderBy orderBy = new QueryParameters.OrderBy("Nom_Proyecto".trim(), QueryParameters.SortOrder.ASCENDING);
+                            query.getOrderByFields().add(orderBy);
                             mainActivity.getmFeatureLayerObra().setDefinitionExpression("1=1");
                             // call select features
                             final ListenableFuture<FeatureQueryResult> featureQueryResultFuture = mServiceFeatureTable.queryFeaturesAsync(query, ServiceFeatureTable.QueryFeatureFields.LOAD_ALL);

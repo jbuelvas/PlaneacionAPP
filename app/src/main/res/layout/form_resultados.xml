@@ -10,7 +10,7 @@
         android:choiceMode="singleChoice"
         android:divider="@color/colorPrimaryDark"
         android:dividerHeight="2px"
-        android:listSelector="@android:color/holo_green_dark"
+        android:listSelector="#574CAF50"
         android:padding="10dp"></ListView>
 
 </LinearLayout>

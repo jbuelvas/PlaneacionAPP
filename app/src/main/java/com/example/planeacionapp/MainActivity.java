@@ -5,11 +5,13 @@ import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 
 import com.esri.arcgisruntime.ArcGISRuntimeEnvironment;
 import com.esri.arcgisruntime.concurrent.ListenableFuture;
 import com.esri.arcgisruntime.data.ArcGISFeature;
+import com.esri.arcgisruntime.data.ArcGISFeatureTable;
 import com.esri.arcgisruntime.data.CodedValue;
 import com.esri.arcgisruntime.data.CodedValueDomain;
 import com.esri.arcgisruntime.data.Domain;
@@ -17,6 +19,7 @@ import com.esri.arcgisruntime.data.Feature;
 import com.esri.arcgisruntime.data.FeatureQueryResult;
 import com.esri.arcgisruntime.data.Field;
 import com.esri.arcgisruntime.data.QueryParameters;
+import com.esri.arcgisruntime.data.RelatedFeatureQueryResult;
 import com.esri.arcgisruntime.data.ServiceFeatureTable;
 import com.esri.arcgisruntime.geometry.GeodeticCurveType;
 import com.esri.arcgisruntime.geometry.Geometry;
@@ -25,10 +28,13 @@ import com.esri.arcgisruntime.geometry.LinearUnit;
 import com.esri.arcgisruntime.geometry.LinearUnitId;
 import com.esri.arcgisruntime.geometry.Point;
 import com.esri.arcgisruntime.layers.FeatureLayer;
+import com.esri.arcgisruntime.layers.Layer;
+import com.esri.arcgisruntime.loadable.LoadStatus;
 import com.esri.arcgisruntime.location.LocationDataSource;
 import com.esri.arcgisruntime.mapping.ArcGISMap;
 import com.esri.arcgisruntime.mapping.Basemap;
 import com.esri.arcgisruntime.mapping.GeoElement;
+import com.esri.arcgisruntime.mapping.LayerList;
 import com.esri.arcgisruntime.mapping.view.Callout;
 import com.esri.arcgisruntime.mapping.view.DefaultMapViewOnTouchListener;
 import com.esri.arcgisruntime.mapping.view.Graphic;
@@ -50,6 +56,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 
+import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.navigation.NavController;
@@ -68,10 +75,12 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = MainActivity.class.getSimpleName();
@@ -88,7 +97,16 @@ public class MainActivity extends AppCompatActivity {
     private android.graphics.Point mClickPoint;
 
     private FeatureLayer mFeatureLayerObra;
+
+    public ServiceFeatureTable getmServiceFeatureTableObra() {
+        return mServiceFeatureTableObra;
+    }
+
     private ServiceFeatureTable mServiceFeatureTableObra;
+
+    public ArcGISFeature getmSelectedArcGISFeature() {
+        return mSelectedArcGISFeature;
+    }
 
     private ArcGISFeature mSelectedArcGISFeature;
 
@@ -101,6 +119,12 @@ public class MainActivity extends AppCompatActivity {
     private FloatingActionButton mFabResultados;
     private FloatingActionButton mFabRegistrarHito;
     private Feature mFeatureProyecto;
+
+    public ArrayList<FeatureLayer> getmOperationalLayers() {
+        return mOperationalLayers;
+    }
+
+    private final ArrayList<FeatureLayer> mOperationalLayers = new ArrayList<>();
 
     private int requestCode = 2;
     String[] reqPermissions = new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission
@@ -166,9 +190,19 @@ public class MainActivity extends AppCompatActivity {
 
         mFeatureLayerObra.setDefinitionExpression("OBJECTID < 0");
 
-        mMap.getOperationalLayers().add(mFeatureLayerObra);
+        //mMap.getOperationalLayers().add(mFeatureLayerObra);
 
         mMapView.setMap(mMap);
+        mMap.addDoneLoadingListener(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("*** mMap.getLoadStatus(): " + mMap.getLoadStatus());
+                if (mMap.getLoadStatus() == LoadStatus.LOADED) {
+                    // create Features to use for listing related features
+                    createFeatures(mMap);
+                }
+            }
+        });
 
         // create a graphics overlay to contain the buffered geometry graphics
         GraphicsOverlay graphicsOverlay = new GraphicsOverlay();
@@ -365,6 +399,21 @@ public class MainActivity extends AppCompatActivity {
         NavigationUI.setupWithNavController(navigationView, navController);
     }
 
+    /**
+     * Create Features from Layers in the Map
+     *
+     * @param map ArcGISMap to get Layers and Tables
+     */
+    private void createFeatures(ArcGISMap map) {
+        LayerList layers = map.getOperationalLayers();
+        // add the National Parks Feature layer to LayerList
+        for (Layer layer : layers) {
+            FeatureLayer fLayer = (FeatureLayer) layer;
+            System.out.println("*** fLayer " + fLayer.getName());
+            mOperationalLayers.add(fLayer);
+        }
+    }
+
     /*
      *
      */
@@ -392,6 +441,37 @@ public class MainActivity extends AppCompatActivity {
                     if (!resultGeoElements.isEmpty()) {
                         if (resultGeoElements.get(0) instanceof ArcGISFeature) {
                             mSelectedArcGISFeature = (ArcGISFeature) resultGeoElements.get(0);
+                            ///
+                            ArcGISFeatureTable selectedTable = (ArcGISFeatureTable) mSelectedArcGISFeature.getFeatureTable();
+                            System.out.println("************* " + selectedTable.getRelatedTables().size());
+                            final ListenableFuture<List<RelatedFeatureQueryResult>> relatedFeatureQueryResultFuture = selectedTable
+                                    .queryRelatedFeaturesAsync(mSelectedArcGISFeature);
+                            relatedFeatureQueryResultFuture.addDoneListener(() -> {
+                                try {
+                                    List<RelatedFeatureQueryResult> relatedFeatureQueryResultList = relatedFeatureQueryResultFuture
+                                            .get();
+                                    // iterate over returned RelatedFeatureQueryResults
+                                    for (RelatedFeatureQueryResult relatedQueryResult : relatedFeatureQueryResultList) {
+                                        // add Table Name to List
+                                        String relatedTableName = relatedQueryResult.getRelatedTable().getTableName();
+                                        System.out.println("************* " + relatedTableName);
+                                        // iterate over Features returned
+                                        for (Feature relatedFeature : relatedQueryResult) {
+                                            // get the Display field to use as filter on related attributes
+                                            ArcGISFeature agsFeature = (ArcGISFeature) relatedFeature;
+                                            String displayFieldName = agsFeature.getFeatureTable().getLayerInfo().getDisplayFieldName();
+                                            String displayFieldValue = agsFeature.getAttributes().get(displayFieldName).toString();
+                                            System.out.println("************* " + displayFieldName);
+                                            System.out.println("************* " + displayFieldValue);
+                                        }
+                                    }
+                                } catch (InterruptedException | ExecutionException e) {
+                                    String error = "Error getting related feature query result: " + e.getMessage();
+                                    Toast.makeText(getmMapView().getContext(), error, Toast.LENGTH_LONG).show();
+                                    Log.e(TAG, error);
+                                }
+                            });
+                            ///
                             // highlight the selected feature
                             mFeatureLayerObra.selectFeature(mSelectedArcGISFeature);
 
@@ -478,11 +558,10 @@ public class MainActivity extends AppCompatActivity {
         mCallout.show();
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     public void setResultados(Feature[] features){
         mFeatures = new Feature[features.length];
         mFeatures = features;
-
-        //if(bankAccNos.contains(bakAccNo))
 
         ArrayList<String> listaResultados = new ArrayList<String>();
         String reg = "";
@@ -519,7 +598,6 @@ public class MainActivity extends AppCompatActivity {
             }
             listaResultados.add(reg);
         }
-
         mResultados = (String[]) listaResultados.toArray(new String[listaResultados.size()]);
     }
 

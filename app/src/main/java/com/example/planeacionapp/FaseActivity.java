@@ -5,6 +5,7 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -18,14 +19,17 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.RequiresApi;
 import androidx.fragment.app.DialogFragment;
 
+import com.esri.arcgisruntime.arcgisservices.RelationshipInfo;
 import com.esri.arcgisruntime.concurrent.ListenableFuture;
 import com.esri.arcgisruntime.data.Feature;
 import com.esri.arcgisruntime.data.FeatureQueryResult;
 import com.esri.arcgisruntime.data.QueryParameters;
 import com.esri.arcgisruntime.data.ServiceFeatureTable;
 import com.esri.arcgisruntime.geometry.Envelope;
+import com.esri.arcgisruntime.layers.FeatureLayer;
 import com.esri.arcgisruntime.mapping.view.LocationDisplay;
 
 import java.util.ArrayList;
@@ -83,6 +87,7 @@ public class FaseActivity extends DialogFragment implements AdapterView.OnItemSe
         mBtnBuscar = (Button) mView.findViewById(R.id.btn_buscar_fase);
         mBtnBuscar.setOnClickListener(new View.OnClickListener()
         {
+            @RequiresApi(api = Build.VERSION_CODES.N)
             @SuppressLint("RestrictedApi")
             @Override
             public void onClick(View arg0)
@@ -96,6 +101,8 @@ public class FaseActivity extends DialogFragment implements AdapterView.OnItemSe
                 QueryParameters query = new QueryParameters();
                 // make search case insensitive
                 query.setWhereClause(consulta);
+                QueryParameters.OrderBy orderBy = new QueryParameters.OrderBy("Nom_Proyecto", QueryParameters.SortOrder.ASCENDING);
+                query.getOrderByFields().add(orderBy);
 
                 if(valorFase == "0"){
                     query.setWhereClause("1=1");

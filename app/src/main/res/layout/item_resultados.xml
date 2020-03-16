@@ -19,13 +19,20 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginLeft="0dp"
-            android:orientation="vertical"
+            android:orientation="horizontal"
             android:layout_weight="1"
             >
+            <ImageView android:id="@+id/icon_item_proyecto"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@mipmap/ic_construction"
+                android:contentDescription=""/>
+
             <TextView
                 android:id="@+id/tv_nombre"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginLeft="5dip"
                 android:text=""
                 android:textStyle="bold"
                 android:textSize="16sp"

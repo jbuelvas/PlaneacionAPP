@@ -1,8 +1,11 @@
 package com.example.planeacionapp;
 
+import android.content.DialogInterface;
 import android.view.View;
 
 import com.example.planeacionapp.Constantes;
+
+import androidx.appcompat.app.AlertDialog;
 
 /**
  * Clase Utilidades
@@ -25,15 +28,41 @@ public class Utilidades {
      * @param v       View
      */
     public void mostrarDialogoAdvertenciaMsg(String mensaje, View v) {
-        QustomDialogBuilder qustomDialogBuilder = new QustomDialogBuilder(v.getContext()).
-                setTitle("Advertencia").
-                setTitleBold(true).
-                setTitleColor(Constantes.COLOR_TITULO_ALERTAS).
-                setDividerColor(Constantes.COLOR_TITULO_ALERTAS).
-                setMessage(mensaje).
-                //setIcon(v.getContext().getResources().getDrawable(R.drawable.error96)).
-                setPositiveButton(true);
+        new AlertDialog.Builder(v.getContext())
+                .setIcon(android.R.drawable.ic_dialog_alert)
+                .setTitle("Advertencia")
+                .setMessage(mensaje)
+                .setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        //finish();
+                    }
+                })
+                /*.setNegativeButton("No", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        //Toast.makeText(getApplicationContext(),"Nothing Happens",Toast.LENGTH_LONG).show();
+                    }
+                })*/
+                .show();
+    }
 
-        qustomDialogBuilder.show();
+    /**
+     * Visualiza un mensaje de información de la transacción.
+     *
+     * @param mensaje Mensaje a mostrar
+     * @param v       View
+     */
+    public void mostrarDialogoInfoMsg(String mensaje, View v) {
+        new AlertDialog.Builder(v.getContext())
+                .setIcon(android.R.drawable.ic_dialog_info)
+                .setTitle("Información")
+                .setMessage(mensaje)
+                .setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                    }
+                })
+                .show();
     }
 }

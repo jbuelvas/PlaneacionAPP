@@ -23,13 +23,21 @@ import android.widget.Toast;
 import com.esri.arcgisruntime.ArcGISRuntimeException;
 import com.esri.arcgisruntime.concurrent.ListenableFuture;
 import com.esri.arcgisruntime.data.ArcGISFeature;
+import com.esri.arcgisruntime.data.ArcGISFeatureTable;
 import com.esri.arcgisruntime.data.Feature;
 import com.esri.arcgisruntime.data.FeatureEditResult;
+import com.esri.arcgisruntime.data.FeatureQueryResult;
+import com.esri.arcgisruntime.data.QueryParameters;
+import com.esri.arcgisruntime.data.RelatedFeatureQueryResult;
 import com.esri.arcgisruntime.data.ServiceFeatureTable;
 import com.esri.arcgisruntime.geometry.Point;
+import com.esri.arcgisruntime.layers.FeatureLayer;
 import com.esri.arcgisruntime.mapping.GeoElement;
 import com.esri.arcgisruntime.mapping.view.IdentifyLayerResult;
+import com.esri.arcgisruntime.mapping.view.MapView;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -59,6 +67,11 @@ public class RegistrarHitoActivity extends DialogFragment implements AdapterView
 
     //EditText
     EditText txtHito;
+
+    //FloatingActionButton
+    private FloatingActionButton addAttachmentFab;
+    private boolean permissionsGranted = false;
+    private static final int REQUEST_IMAGE_CAPTURE = 1;
 
     Context mContext;
 
@@ -126,6 +139,8 @@ public class RegistrarHitoActivity extends DialogFragment implements AdapterView
         this.cargarTabs();
         this.cargarBotones();
 
+        util = new Utilidades();
+
         return mView;
     }
 
@@ -173,40 +188,11 @@ public class RegistrarHitoActivity extends DialogFragment implements AdapterView
                     System.out.println(txtHito.getText().toString());
                     if(txtHito.getText().toString().equalsIgnoreCase("")){
                         System.out.println("Hito1");
-                        new AlertDialog.Builder(mContext)
-                                .setIcon(android.R.drawable.ic_dialog_alert)
-                                .setTitle("Advertencia")
-                                .setMessage("Digitar el hito de la obra.")
-                                .setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialogInterface, int i) {
-                                        //finish();
-                                    }
-                                })
-                                /*.setNegativeButton("No", new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialogInterface, int i) {
-                                        //Toast.makeText(getApplicationContext(),"Nothing Happens",Toast.LENGTH_LONG).show();
-                                    }
-                                })*/
-                                .show();
+                        util.mostrarDialogoAdvertenciaMsg("Digitar hito del proyecto.", mView);
                     }
                     else
                     {
-                        System.out.println("Hito2");
-
-                        // create the attributes for the feature
-                        java.util.Map<String, Object> attributes = new HashMap<String, Object>();
-
-                        attributes.put("ID_Obra", Double.parseDouble(idObra));
-                        attributes.put("HITO", txtHito.getText().toString());
-                        attributes.put("Date", "11/03/2020");
-
-                        System.out.println("* * * * " + Double.parseDouble(idObra));
-                        System.out.println("* * * * " + txtHito.getText().toString());
-                        System.out.println("* * * * " + "11/03/2020");
-
-                        addFeature(attributes);
+                        queryRelatedFeatures3();
                     }
                 }
                 catch(Exception ex){
@@ -214,10 +200,334 @@ public class RegistrarHitoActivity extends DialogFragment implements AdapterView
                 }
             }
         });
+
+        // inflate the floating action button
+        addAttachmentFab = (FloatingActionButton) mView.findViewById(R.id.addAttachmentFAB);
+        // select an image to upload as an attachment
+        addAttachmentFab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (!permissionsGranted) {
+                    //getPermissions(requestCodeGallery);
+                } else {
+                    //selectAttachment();
+                    System.out.println("***permissionsGranted***");
+                }
+            }
+        });
     }
 
-    private void applyEdits(ServiceFeatureTable featureTable){
+    /**
+     * Query related features from selected feature
+     *
+     */
+    private void queryRelatedFeatures3() {
+        mProgressDialog.setMessage("Registrando hito...");
+        mProgressDialog.show();
+        //ArcGISFeature feature = (ArcGISFeature) ((MainActivity)getActivity()).getmFeatureProyecto();
+        final FeatureLayer selectedLayer = ((MainActivity)getActivity()).getmOperationalLayers().get(0);
+        QueryParameters queryParams = new QueryParameters();
+        queryParams.setWhereClause("ID_Obra_1 = " + Double.parseDouble(idObra));
+
+        final ListenableFuture<FeatureQueryResult> relatedFeatureQueryResultFuture = selectedLayer
+                .selectFeaturesAsync(queryParams, FeatureLayer.SelectionMode.NEW);
+
+        relatedFeatureQueryResultFuture.addDoneListener(() -> {
+            try {
+                mProgressDialog.dismiss();
+                FeatureQueryResult result = relatedFeatureQueryResultFuture.get();
+
+                // iterate over returned RelatedFeatureQueryResults
+                for (Feature feature : result) {
+                    ArcGISFeature arcGISFeature = (ArcGISFeature) feature;
+                    ArcGISFeatureTable selectedTable = (ArcGISFeatureTable) feature.getFeatureTable();
+                    System.out.println("* * *  selectedTable " + selectedTable.getTableName());
+
+                    Map<String, Object> attr = arcGISFeature.getAttributes();
+                    Set<String> keys = attr.keySet();
+                    System.out.println("******************************************************************");
+
+                    for (String key : keys) {
+                        Object value = attr.get(key);
+                        System.out.println(key + ": " + value + "\n");
+                    }
+                    System.out.println("******************************************************************");
+
+                    final ListenableFuture<List<RelatedFeatureQueryResult>> relatedFeatureQueryResultFuture2 = selectedTable
+                            .queryRelatedFeaturesAsync(arcGISFeature);
+                    relatedFeatureQueryResultFuture.addDoneListener(() -> {
+                        try {
+                            List<RelatedFeatureQueryResult> relatedFeatureQueryResultList = relatedFeatureQueryResultFuture2
+                                    .get();
+                            // iterate over returned RelatedFeatureQueryResults
+                            for (RelatedFeatureQueryResult relatedQueryResult : relatedFeatureQueryResultList) {
+                                // add Table Name to List
+                                String relatedTableName = relatedQueryResult.getRelatedTable().getTableName();
+
+
+                                if(relatedTableName.equalsIgnoreCase(getString(R.string.table_name_hitos))){
+                                    System.out.println("* * *  relatedTableName " + relatedTableName);
+                                    System.out.println("* * *  relatedQueryResult.getRelatedTable() " + relatedQueryResult.getRelatedTable().getTableName());
+
+                                    ArcGISFeature createdFeature = (ArcGISFeature) relatedQueryResult.getRelatedTable().createFeature();
+                                    System.out.println("* * *  addFeature " + createdFeature);
+
+                                    Calendar fecha = Calendar.getInstance();
+                                    System.out.println("* * *  fecha " + fecha);
+                                    System.out.println("* * *  size " + createdFeature.getAttributes().size());
+
+                                    Map<String, Object> attr1 = createdFeature.getAttributes();
+                                    Set<String> keys1 = attr1.keySet();
+
+                                    for (String key : keys1) {
+                                        Object value = attr1.get(key);
+                                        System.out.println(key + ": " + value + "\n");
+                                    }
+
+                                    //createdFeature.getAttributes().put("OBJECTID", 0);
+                                    //createdFeature.getAttributes().put("ID_Obra", 26);
+                                    createdFeature.getAttributes().put("HITO", txtHito.getText().toString());
+                                    //createdFeature.getAttributes().put("Date", "16/03/2020");
+                                    //createdFeature.getAttributes().put("GlobalID", "");
+
+                                    /*
+                                    OBJECTID:	2
+                                    ID_Obra:	2
+                                    HITO:	Construcccion Puente
+                                    Date:	1/29/2019 12:00:00 AM
+                                    GlobalID:	e71a1b97-f7a9-4794-afe4-e764af65c650*/
+
+                                    for (String key : keys1) {
+                                        Object value = attr1.get(key);
+                                        System.out.println(key + ": " + value + "\n");
+                                    }
+
+                                    arcGISFeature.relateFeature(createdFeature);
+                                    // Add the feature to the table.
+                                    //relatedQueryResult.getRelatedTable().addFeatureAsync(createdFeature);
+
+                                    // check if feature can be added to feature table
+                                    if (relatedQueryResult.getRelatedTable().canAdd()) {
+                                        // add the new feature to the feature table and to server
+                                        ListenableFuture<Void> addFeatureFuture = relatedQueryResult.getRelatedTable().addFeatureAsync(createdFeature);
+
+                                        addFeatureFuture.addDoneListener(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                try {
+                                                    // check the result of the future to find out if/when the addFeatureAsync call succeeded - exception will be
+                                                    // thrown if the edit failed
+                                                    System.out.println("*** Actualizando ***");
+                                                    addFeatureFuture.get();
+
+                                                    // if using an ArcGISFeatureTable, call getAddedFeaturesCountAsync to check the total number of features
+                                                    // that have been added since last sync
+
+                                                    // if dealing with ServiceFeatureTable, apply edits after making updates; if editing locally, then edits can
+                                                    // be synchronized at some point using the SyncGeodatabaseTask.
+                                                    //if (arcGisFeatureTable instanceof ServiceFeatureTable) {
+                                                        ServiceFeatureTable serviceFeatureTable = (ServiceFeatureTable)relatedQueryResult.getRelatedTable();
+                                                        // apply the edits
+                                                        final ListenableFuture<List<FeatureEditResult>> applyEditsFuture = serviceFeatureTable.applyEditsAsync();
+                                                        applyEditsFuture.addDoneListener(new Runnable() {
+                                                            @Override
+                                                            public void run() {
+                                                                try {
+                                                                    final List<FeatureEditResult> featureEditResults = applyEditsFuture.get();
+                                                                    // if required, can check the edits applied in this operation
+                                                                    System.out.println(String.format("Number of edits: %d", featureEditResults.size()));
+                                                                    mTabs.setCurrentTab(1);
+                                                                    mProgressDialog.dismiss();
+
+                                                                    util.mostrarDialogoInfoMsg("Hito registrado.", mView);
+                                                                } catch (InterruptedException | ExecutionException e) {
+                                                                    System.out.println(" e 1 ");
+                                                                }
+                                                            }
+                                                        });
+                                                    //}
+
+                                                } catch (InterruptedException | ExecutionException e) {
+                                                    // executionException may contain an ArcGISRuntimeException with edit error information.
+                                                    if (e.getCause() instanceof ArcGISRuntimeException) {
+                                                        ArcGISRuntimeException agsEx = (ArcGISRuntimeException)e.getCause();
+                                                        System.out.println(String.format("Error al registra el hito %d\n=%s", agsEx.getErrorCode(), agsEx.getMessage()));
+                                                        util.mostrarDialogoAdvertenciaMsg(String.format("Error al registra el hito %d\n=%s", agsEx.getErrorCode(), agsEx.getMessage()), mView);
+                                                    } else {
+                                                        System.out.println(" e 2 ");
+                                                    }
+                                                }
+                                            }
+                                        });
+                                    } else {
+                                        System.out.println("Cannot add a feature to this feature table");
+                                    }
+                                    // iterate over Features returned
+                                        /*for (Feature relatedFeature : relatedQueryResult) {
+                                            // get the Display field to use as filter on related attributes
+                                            ArcGISFeature agsFeature = (ArcGISFeature) relatedFeature;
+                                            String displayFieldName = agsFeature.getFeatureTable().getLayerInfo().getDisplayFieldName();
+                                            String displayFieldValue = agsFeature.getAttributes().get(displayFieldName).toString();
+                                            System.out.println("* * *  displayFieldName " + displayFieldName);
+                                            System.out.println("* * *  displayFieldValue " + displayFieldValue);
+                                        }*/
+                                }
+
+                            }
+                        } catch (InterruptedException | ExecutionException e) {
+                            String error = "Error getting related feature query result: " + e.getMessage();
+                            Toast.makeText(this.mContext, error, Toast.LENGTH_LONG).show();
+                            Log.e(TAG, error);
+                        }
+                    });
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                String error = "Error getting related feature query result: " + e.getMessage();
+                Toast.makeText(this.mContext, error, Toast.LENGTH_LONG).show();
+                Log.e(TAG, error);
+            }
+        });
+    }
+
+    private void applyEdits2(ServiceFeatureTable featureTable){
         System.out.println("* * *  ok ");
+    }
+
+    private void applyEdits(ArcGISFeatureTable featureTable){
+        System.out.println("* * *  ok ");
+
+        // apply the changes to the server
+        ListenableFuture<List<FeatureEditResult>> editResult = ((MainActivity)getActivity()).getmServiceFeatureTableObra().applyEditsAsync();
+        editResult.addDoneListener(() -> {
+            try {
+                List<FeatureEditResult> edits = editResult.get();
+                // check if the server edit was successful
+                if (edits != null && edits.size() > 0) {
+                    if (!edits.get(0).hasCompletedWithErrors()) {
+                        System.out.println("Feature successfully added");
+                    } else {
+                        throw edits.get(0).getError();
+                    }
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                System.out.println("Exception applying edits on server " + e.getCause().getMessage());
+            }
+        });
+    }
+
+    private void addFeature2(java.util.Map<String, Object> attributes) {
+        QueryParameters queryParams = new QueryParameters();
+        queryParams.setWhereClause("ID_Obra_1 = 4");
+        // get the FeatureLayer to query
+        final FeatureLayer selectedLayer = ((MainActivity)getActivity()).getmOperationalLayers().get(0);
+        System.out.println("***selectedLayer " + selectedLayer.getName());
+        // get a list of related features to display
+        queryRelatedFeatures(selectedLayer, queryParams);
+    }
+
+    private void queryRelatedFeatures(final FeatureLayer featureLayer, QueryParameters queryParameters) {
+        final ListenableFuture<FeatureQueryResult> featureQueryResultFuture = featureLayer
+                .selectFeaturesAsync(queryParameters, FeatureLayer.SelectionMode.NEW);
+
+        // clear previously selected layers
+        featureLayer.clearSelection();
+        featureQueryResultFuture.addDoneListener(() -> {
+            // call get on the future to get the result
+            try {
+                if (featureQueryResultFuture.get().iterator().hasNext()) {
+                    FeatureQueryResult result = featureQueryResultFuture.get();
+
+                    while(result.iterator().hasNext()){
+                        System.out.println("* * *  result " + result.iterator().next());
+                    }
+                    // iterate over features returned
+                    for (Feature feature : result) {
+                        ArcGISFeature arcGISFeature = (ArcGISFeature) feature;
+                        ArcGISFeatureTable selectedTable = (ArcGISFeatureTable) feature.getFeatureTable();
+                        final ListenableFuture<List<RelatedFeatureQueryResult>> relatedFeatureQueryResultFuture = selectedTable
+                                .queryRelatedFeaturesAsync(arcGISFeature);
+                        relatedFeatureQueryResultFuture.addDoneListener(() -> {
+                            try {
+                                List<RelatedFeatureQueryResult> relatedFeatureQueryResultList = relatedFeatureQueryResultFuture
+                                        .get();
+                                // iterate over returned RelatedFeatureQueryResults
+                                for (RelatedFeatureQueryResult relatedQueryResult : relatedFeatureQueryResultList) {
+                                    // add Table Name to List
+                                    String relatedTableName = relatedQueryResult.getRelatedTable().getTableName();
+                                    System.out.println("* * *  relatedTableName " + relatedTableName);
+
+
+                                    if(relatedTableName.equalsIgnoreCase(getString(R.string.table_name_hitos))){
+                                        ArcGISFeature createdFeature = (ArcGISFeature) relatedQueryResult.getRelatedTable().createFeature();
+                                        System.out.println("* * *  addFeature " + createdFeature);
+
+                                        createdFeature.getAttributes().put("ID_Obra", Double.parseDouble(idObra));
+                                        createdFeature.getAttributes().put("HITO", txtHito.getText().toString());
+                                        createdFeature.getAttributes().put("Date", "11/03/2020");
+
+                                        arcGISFeature.relateFeature(createdFeature);
+                                        // iterate over Features returned
+                                        /*for (Feature relatedFeature : relatedQueryResult) {
+                                            // get the Display field to use as filter on related attributes
+                                            ArcGISFeature agsFeature = (ArcGISFeature) relatedFeature;
+                                            String displayFieldName = agsFeature.getFeatureTable().getLayerInfo().getDisplayFieldName();
+                                            String displayFieldValue = agsFeature.getAttributes().get(displayFieldName).toString();
+                                            System.out.println("* * *  displayFieldName " + displayFieldName);
+                                            System.out.println("* * *  displayFieldValue " + displayFieldValue);
+                                        }*/
+                                    }
+
+                                }
+                            } catch (InterruptedException | ExecutionException e) {
+                                String error = "Error getting related feature query result: " + e.getMessage();
+                                Toast.makeText(this.mContext, error, Toast.LENGTH_LONG).show();
+                                Log.e(TAG, error);
+                            }
+                        });
+                    }
+                } else {
+                    Toast.makeText(this.mContext, "no hay", Toast.LENGTH_LONG).show();
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                String error = "Error getting feature query result: " + e.getMessage();
+                Toast.makeText(this.mContext, error, Toast.LENGTH_LONG).show();
+                Log.e(TAG, error);
+            }
+        });
+    }
+
+    private void addFeature1(java.util.Map<String, Object> attributes) {
+        System.out.println("* * *  addFeature1 ");
+        System.out.println("* * *  getmSelectedArcGISFeature " + ((MainActivity)getActivity()).getmSelectedArcGISFeature());
+        ServiceFeatureTable serviceFeatureTableHitos = new ServiceFeatureTable(getString(R.string.obra_service_url));
+        System.out.println("* * *  serviceFeatureTableHitos " + serviceFeatureTableHitos);
+        final ListenableFuture<List<RelatedFeatureQueryResult>> relatedFeatureQueryResultFuture = serviceFeatureTableHitos
+                .queryRelatedFeaturesAsync(((MainActivity)getActivity()).getmSelectedArcGISFeature());//ArcGISFeature
+
+        System.out.println("* * *  relatedFeatureQueryResultFuture " + relatedFeatureQueryResultFuture);
+
+        relatedFeatureQueryResultFuture.addDoneListener(() -> {
+            try {
+                List<RelatedFeatureQueryResult> relatedFeatureQueryResultList = relatedFeatureQueryResultFuture.get();
+                System.out.println("* * *  relatedFeatureQueryResultList " + relatedFeatureQueryResultList);
+
+                // iterate over returned RelatedFeatureQueryResults
+                for (RelatedFeatureQueryResult relatedQueryResult : relatedFeatureQueryResultList) {
+                    // iterate over Features returned
+                    for (Feature relatedFeature : relatedQueryResult) {
+                        // persist selected related feature
+                        ArcGISFeature mSelectedRelatedFeature = (ArcGISFeature) relatedFeature;
+                        // get preserve park name
+                        String parkName = mSelectedRelatedFeature.getAttributes().get("Nom_Proyecto ").toString();
+                        System.out.println(parkName);
+                    }
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                String error = "Error getting related feature query result: " + e.getMessage();
+                Toast.makeText(this.mContext, error, Toast.LENGTH_LONG).show();
+                Log.e(TAG, error);
+            }
+        });
     }
 
     /**
@@ -228,10 +538,58 @@ public class RegistrarHitoActivity extends DialogFragment implements AdapterView
         mProgressDialog.setMessage("Guardando hito...");
         mProgressDialog.show();
 
+        // identify a feature from the service request
+        MapView mapView = ((MainActivity)getActivity()).getmMapView();
+        FeatureLayer layer = ((MainActivity)getActivity()).getmFeatureLayerObra();
+        double x = ((MainActivity)getActivity()).getmFeatureProyecto().getGeometry().getExtent().getCenter().getX();
+        double y = ((MainActivity)getActivity()).getmFeatureProyecto().getGeometry().getExtent().getCenter().getY();
+        android.graphics.Point point = new android.graphics.Point((int)x, (int)y);
+        ListenableFuture<IdentifyLayerResult> result = mapView.identifyLayerAsync(layer, point, 5, false);
+        result.addDoneListener(() -> {
+            try {
+                System.out.println("* * *  result.get().getElements().size() " + result.get().getElements().size());
+                // get first feature that was identified
+                if (result.get().getElements().size() > 0 && result.get().getElements().get(0) instanceof ArcGISFeature) {
+                    ArcGISFeature serviceFeature = (ArcGISFeature) result.get().getElements().get(0);
+                    // get related tables from feature
+                    ArcGISFeatureTable serviceRequestTable = serviceFeature.getFeatureTable();
+                    List<ArcGISFeatureTable> relatedTables = serviceRequestTable.getRelatedTables();
+
+
+                    // Assuming the comments table is the first related table
+                    // (if there are many related tables, you can loop through the collection and check the table name)
+                    ArcGISFeatureTable commentsTable = relatedTables.get(0);
+
+
+                    // create a new feature in that table
+                    ArcGISFeature createdFeature = (ArcGISFeature) commentsTable.createFeature();
+                    createdFeature.getAttributes().put("comments", "Please show up on time!");
+
+
+                    // relate identified feature to new feature comment
+                    serviceFeature.relateFeature(createdFeature);
+                }
+            } catch (ExecutionException | InterruptedException ex) {
+                // .. handle any exception that may occur
+            }
+        });
+
         System.out.println("* * *  1 ");
-        ServiceFeatureTable serviceFeatureTableHitos = new ServiceFeatureTable(getString(R.string.hitos_service_url));
+        ServiceFeatureTable serviceFeatureTableHitos = new ServiceFeatureTable(getString(R.string.obra_service_url));
         System.out.println("* * *  2 ");
         System.out.println("* * *  canAdd " + serviceFeatureTableHitos.canAdd());
+        System.out.println("* * *  3 ");
+        ArcGISFeature serviceFeature = (ArcGISFeature) ((MainActivity)getActivity()).getmFeatureProyecto();
+        System.out.println("* * *  4 " + serviceFeature);
+        // get related tables from feature
+        ArcGISFeatureTable serviceRequestTable = serviceFeature.getFeatureTable();
+        System.out.println("* * *  5 " + serviceRequestTable.getTableName());
+        List<ArcGISFeatureTable> relatedTables = serviceRequestTable.getRelatedTables();
+        System.out.println("* * *  relatedTables.size() " + relatedTables.size());
+        // Assuming the comments table is the first related table
+        // (if there are many related tables, you can loop through the collection and check the table name)
+        ArcGISFeatureTable commentsTable = relatedTables.get(0);
+        System.out.println("* * *  6 " + commentsTable.getTableName());
         // Create a new feature from the attributes and an existing point geometry, and then add the feature
         try {
             Feature addedFeature = serviceFeatureTableHitos.createFeature(attributes, ((MainActivity)getActivity()).getmFeatureProyecto().getGeometry());
