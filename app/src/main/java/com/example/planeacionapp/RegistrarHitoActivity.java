@@ -1,13 +1,18 @@
 package com.example.planeacionapp;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -37,6 +42,10 @@ import com.esri.arcgisruntime.mapping.view.IdentifyLayerResult;
 import com.esri.arcgisruntime.mapping.view.MapView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import org.apache.commons.io.FileUtils;
+
+import java.io.File;
+import java.io.IOException;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -46,6 +55,8 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.DialogFragment;
 
 /**
@@ -71,7 +82,7 @@ public class RegistrarHitoActivity extends DialogFragment implements AdapterView
     //FloatingActionButton
     private FloatingActionButton addAttachmentFab;
     private boolean permissionsGranted = false;
-    private static final int REQUEST_IMAGE_CAPTURE = 1;
+    private static final int REQUEST_IMAGE_CAPTURE = 11;
 
     Context mContext;
 
@@ -82,6 +93,8 @@ public class RegistrarHitoActivity extends DialogFragment implements AdapterView
     private String strDescripcion = "";
     private String strEstado = "";
     private String idObra = "";
+    private int oidHito = 0;
+    private int consecutivoImg = 0;
 
     @SuppressLint("ValidFragment")
     public RegistrarHitoActivity(Feature feature){
@@ -184,7 +197,6 @@ public class RegistrarHitoActivity extends DialogFragment implements AdapterView
             {
                 try
                 {
-
                     System.out.println(txtHito.getText().toString());
                     if(txtHito.getText().toString().equalsIgnoreCase("")){
                         System.out.println("Hito1");
@@ -207,15 +219,66 @@ public class RegistrarHitoActivity extends DialogFragment implements AdapterView
         addAttachmentFab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (!permissionsGranted) {
-                    //getPermissions(requestCodeGallery);
-                } else {
-                    //selectAttachment();
-                    System.out.println("***permissionsGranted***");
+                try
+                {
+                    if (!permissionsGranted) {
+                        boolean permissionCheck = ContextCompat.checkSelfPermission(((MainActivity)getActivity()).getmMapView().getContext(),Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+                        System.out.println("***permissionCheck*** " + permissionCheck);
+                        if (!permissionCheck) {
+                            // If permissions are not already granted, request permission from the user.
+                            requestPermissions(new String[]{Manifest.permission.CAMERA}, REQUEST_IMAGE_CAPTURE);
+                        }
+                        else{
+                            permissionsGranted = true;
+                            takePicture();
+                        }
+                    } else {
+                        takePicture();
+                        System.out.println("***permissionsGranted***");
+                    }
+                }
+                catch(Exception exc){
+                    System.out.println("***Exception " + exc.getMessage());
                 }
             }
         });
     }
+
+    /**
+     *
+     */
+    public void takePicture() {
+        // Fire off a ACTION_IMAGE_CAPTURE intent to launch a camera app.
+        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        if (takePictureIntent.resolveActivity(((MainActivity)getActivity()).getPackageManager()) != null) {
+            startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
+        }
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        System.out.println("*** onActivityResult ***");
+        Uri selectedImage = data.getData();
+        String[] filePathColumn = {MediaStore.Images.Media.DATA};
+
+        String nombre_attachment = Constantes.NOMBRE_IMG_HITO + oidHito + "_" + consecutivoImg + ".png";
+        consecutivoImg++;
+
+        System.out.println("*** selectedImage " + selectedImage.getPath());
+        System.out.println("*** nombre_attachment " + nombre_attachment);
+
+        // covert file to bytes to pass to ArcGISFeature
+        byte[] imageByte = new byte[0];
+        try {
+            File imageFile = new File(selectedImage.getPath());
+            imageByte = FileUtils.readFileToByteArray(imageFile);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        System.out.println("*** imageByte " + imageByte);
+    }
+
 
     /**
      * Query related features from selected feature
@@ -234,7 +297,6 @@ public class RegistrarHitoActivity extends DialogFragment implements AdapterView
 
         relatedFeatureQueryResultFuture.addDoneListener(() -> {
             try {
-                mProgressDialog.dismiss();
                 FeatureQueryResult result = relatedFeatureQueryResultFuture.get();
 
                 // iterate over returned RelatedFeatureQueryResults
@@ -334,12 +396,13 @@ public class RegistrarHitoActivity extends DialogFragment implements AdapterView
                                                             public void run() {
                                                                 try {
                                                                     final List<FeatureEditResult> featureEditResults = applyEditsFuture.get();
+                                                                    oidHito = (int)featureEditResults.get(0).getObjectId();
                                                                     // if required, can check the edits applied in this operation
-                                                                    System.out.println(String.format("Number of edits: %d", featureEditResults.size()));
+                                                                    System.out.println(String.format("getObjectId: %d", featureEditResults.get(0).getObjectId()));
                                                                     mTabs.setCurrentTab(1);
-                                                                    mProgressDialog.dismiss();
 
                                                                     util.mostrarDialogoInfoMsg("Hito registrado.", mView);
+                                                                    mProgressDialog.dismiss();
                                                                 } catch (InterruptedException | ExecutionException e) {
                                                                     System.out.println(" e 1 ");
                                                                 }
@@ -356,11 +419,14 @@ public class RegistrarHitoActivity extends DialogFragment implements AdapterView
                                                     } else {
                                                         System.out.println(" e 2 ");
                                                     }
+
+                                                    mProgressDialog.dismiss();
                                                 }
                                             }
                                         });
                                     } else {
                                         System.out.println("Cannot add a feature to this feature table");
+                                        util.mostrarDialogoAdvertenciaMsg("No es posible registrar el hito al proyecto, intentelo nuevamente.", mView);
                                     }
                                     // iterate over Features returned
                                         /*for (Feature relatedFeature : relatedQueryResult) {
@@ -387,10 +453,6 @@ public class RegistrarHitoActivity extends DialogFragment implements AdapterView
                 Log.e(TAG, error);
             }
         });
-    }
-
-    private void applyEdits2(ServiceFeatureTable featureTable){
-        System.out.println("* * *  ok ");
     }
 
     private void applyEdits(ArcGISFeatureTable featureTable){
