@@ -78,6 +78,8 @@ public class ResultadosActivity extends DialogFragment implements AdapterView.On
                 //final FeatureLayer selectedLayer = ((MainActivity)getActivity()).getmOperationalLayers().get(0);
                 //queryRelatedFeatures(selectedLayer, queryParams);
 
+                
+
                 ((MainActivity) getActivity()).getmCallout().dismiss();
                 ((MainActivity)getActivity()).getmMapView().setViewpointGeometryAsync(feat.getGeometry().getExtent(), 10);
                 ((MainActivity)getActivity()).setProyecto(feat);
