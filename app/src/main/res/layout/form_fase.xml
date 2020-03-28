@@ -88,6 +88,46 @@
 
             <View android:layout_height="10dp" android:layout_width="1dp" />
 
+            <LinearLayout
+                android:id="@+id/cont_zonas"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:orientation="horizontal"
+                android:visibility="gone"
+                android:gravity="center_vertical|start"
+                >
+
+                <RelativeLayout
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginRight="3dp"
+                    android:layout_weight=".28"
+                    android:background="@layout/my_spinner_border"
+                    android:orientation="horizontal">
+
+                    <Spinner
+                        android:id="@+id/list_zonas"
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_centerVertical="true"
+                        android:layout_gravity="center"
+                        android:background="@android:color/transparent"
+                        android:gravity="center"
+                        android:layout_marginLeft="5dp"
+                        android:spinnerMode="dropdown" />
+
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentRight="true"
+                        android:layout_centerVertical="true"
+                        android:layout_gravity="center"
+                        android:src="@mipmap/drop" />
+                </RelativeLayout>
+            </LinearLayout>
+
+            <View android:layout_height="10dp" android:layout_width="1dp" />
+
             <Button
                 android:id="@+id/btn_buscar_fase"
                 android:layout_width="match_parent"

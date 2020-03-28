@@ -2,6 +2,8 @@ package com.example.planeacionapp;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.ProgressDialog;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Color;
@@ -16,6 +18,7 @@ import com.esri.arcgisruntime.data.CodedValue;
 import com.esri.arcgisruntime.data.CodedValueDomain;
 import com.esri.arcgisruntime.data.Domain;
 import com.esri.arcgisruntime.data.Feature;
+import com.esri.arcgisruntime.data.FeatureEditResult;
 import com.esri.arcgisruntime.data.FeatureQueryResult;
 import com.esri.arcgisruntime.data.Field;
 import com.esri.arcgisruntime.data.QueryParameters;
@@ -48,15 +51,20 @@ import com.esri.arcgisruntime.symbology.SimpleFillSymbol;
 import com.esri.arcgisruntime.symbology.SimpleLineSymbol;
 import com.esri.arcgisruntime.symbology.SimpleMarkerSymbol;
 import com.esri.arcgisruntime.symbology.SimpleRenderer;
+import com.example.planeacionapp.ui.spinner.ItemData;
+import com.example.planeacionapp.ui.spinner.SpinnerAdapter;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 
+import android.text.Html;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.navigation.NavController;
@@ -69,7 +77,9 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import android.view.Menu;
+import android.widget.AdapterView;
 import android.widget.LinearLayout;
+import android.widget.Spinner;
 import android.widget.TabHost;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -91,18 +101,21 @@ public class MainActivity extends AppCompatActivity {
     private ArcGISMap mMap;
     private Portal mPortal;
     private PortalItem mPortalItem;
+    private Spinner mSpinner;
+    private Spinner mSpinnerRutas;
+    private ProgressDialog mProgressDialog;
 
     private android.graphics.Point mScreenPoint;
     private com.esri.arcgisruntime.geometry.Point mMapPoint;
     private android.graphics.Point mClickPoint;
 
-    private FeatureLayer mFeatureLayerObra;
+    private FeatureLayer mFeatureLayerManzana;
 
-    public ServiceFeatureTable getmServiceFeatureTableObra() {
-        return mServiceFeatureTableObra;
+    public ServiceFeatureTable getmServiceFeatureTableManzana() {
+        return mServiceFeatureTableManzana;
     }
 
-    private ServiceFeatureTable mServiceFeatureTableObra;
+    private ServiceFeatureTable mServiceFeatureTableManzana;
 
     public ArcGISFeature getmSelectedArcGISFeature() {
         return mSelectedArcGISFeature;
@@ -150,8 +163,8 @@ public class MainActivity extends AppCompatActivity {
         return mMapView;
     }
 
-    public FeatureLayer getmFeatureLayerObra() {
-        return mFeatureLayerObra;
+    public FeatureLayer getmFeatureLayerManzana() {
+        return mFeatureLayerManzana;
     }
 
     public Callout getmCallout() {
@@ -162,8 +175,8 @@ public class MainActivity extends AppCompatActivity {
         return mFeatureProyecto;
     }
 
-    String[] mResultados = {"300 mts","500 mts","1.000 mts"};
-    Feature[] mFeatures;
+    private Utilidades util;
+    private AlertDialog mDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -171,6 +184,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         mInflater = this.getLayoutInflater();
+
+        util = new Utilidades();
 
         // license with a license key
         ArcGISRuntimeEnvironment.setLicense(getResources().getString(R.string.license_key));
@@ -184,19 +199,21 @@ public class MainActivity extends AppCompatActivity {
         // create a map from a PortalItem
         mMap = new ArcGISMap(mPortalItem);
 
-        mServiceFeatureTableObra = new ServiceFeatureTable(getString(R.string.obra_service_url));
-        mServiceFeatureTableObra.setFeatureRequestMode(ServiceFeatureTable.FeatureRequestMode.ON_INTERACTION_CACHE);
-        mFeatureLayerObra = new FeatureLayer(mServiceFeatureTableObra);
+        mServiceFeatureTableManzana = new ServiceFeatureTable(getString(R.string.manzanas_service_url));
+        mServiceFeatureTableManzana.setFeatureRequestMode(ServiceFeatureTable.FeatureRequestMode.ON_INTERACTION_CACHE);
+        mFeatureLayerManzana = new FeatureLayer(mServiceFeatureTableManzana);
 
-        mFeatureLayerObra.setDefinitionExpression("OBJECTID < 0");
+        mFeatureLayerManzana.setDefinitionExpression("OBJECTID < 0");
 
-        //mMap.getOperationalLayers().add(mFeatureLayerObra);
+        mProgressDialog = new ProgressDialog(mMapView.getContext());
+
+        //mMap.getOperationalLayers().add(mFeatureLayerManzana);
 
         mMapView.setMap(mMap);
         mMap.addDoneLoadingListener(new Runnable() {
             @Override
             public void run() {
-                System.out.println("*** mMap.getLoadStatus(): " + mMap.getLoadStatus());
+                //System.out.println("*** mMap.getLoadStatus(): " + mMap.getLoadStatus());
                 if (mMap.getLoadStatus() == LoadStatus.LOADED) {
                     // create Features to use for listing related features
                     createFeatures(mMap);
@@ -280,8 +297,8 @@ public class MainActivity extends AppCompatActivity {
                 LocationDataSource.Location location = mLocationDisplay.getLocation();
                 if (location != null) {
                     Point point = location.getPosition();
-                    System.out.println(point.getX());
-                    System.out.println(point.getY());
+                    //System.out.println(point.getX());
+                    //System.out.println(point.getY());
 
                     // get the buffer distance (miles) entered in the text box.
                     double bufferInMeters = Double.valueOf("300");
@@ -310,7 +327,7 @@ public class MainActivity extends AppCompatActivity {
                     QueryParameters query = new QueryParameters();
                     query.setGeometry(geodesicGraphicsOverlay.getExtent());
                     // call select features
-                    final ListenableFuture<FeatureQueryResult> featureQueryResultFuture = mFeatureLayerObra
+                    final ListenableFuture<FeatureQueryResult> featureQueryResultFuture = mFeatureLayerManzana
                             .selectFeaturesAsync(query, FeatureLayer.SelectionMode.NEW);
                     // add done loading listener to fire when the selection returns
                     featureQueryResultFuture.addDoneListener(() -> {
@@ -349,34 +366,120 @@ public class MainActivity extends AppCompatActivity {
                 // convert this to a map point
                 com.esri.arcgisruntime.geometry.Point mapPoint = mMapView.screenToLocation(mScreenPoint);
                 mMapPoint = mapPoint;
-                System.out.println("-----------" + mMapView.getMapScale());
+                //System.out.println("-----------" + mMapView.getMapScale());
 
-                seleccionarObra(me);
+                seleccionarManzana(me);
 
                 return super.onSingleTapConfirmed(me);
             }
         });
 
+        // Listen to changes in the status of the location data source.
+        mLocationDisplay.addDataSourceStatusChangedListener(new LocationDisplay.DataSourceStatusChangedListener() {
+            @Override
+            public void onStatusChanged(LocationDisplay.DataSourceStatusChangedEvent dataSourceStatusChangedEvent) {
+
+                // If LocationDisplay started OK, then continue.
+                if (dataSourceStatusChangedEvent.isStarted())
+                    return;
+
+                // No error is reported, then continue.
+                if (dataSourceStatusChangedEvent.getError() == null)
+                    return;
+
+                // If an error is found, handle the failure to start.
+                // Check permissions to see if failure may be due to lack of permissions.
+                boolean permissionCheck1 = ContextCompat.checkSelfPermission(MainActivity.this, reqPermissions[0]) ==
+                        PackageManager.PERMISSION_GRANTED;
+                boolean permissionCheck2 = ContextCompat.checkSelfPermission(MainActivity.this, reqPermissions[1]) ==
+                        PackageManager.PERMISSION_GRANTED;
+
+                if (!(permissionCheck1 && permissionCheck2)) {
+                    // If permissions are not already granted, request permission from the user.
+                    ActivityCompat.requestPermissions(MainActivity.this, reqPermissions, requestCode);
+                } else {
+                    // Report other unknown failure types to the user - for example, location services may not
+                    // be enabled on the device.
+                    String message = String.format("Error in DataSourceStatusChangedListener: %s", dataSourceStatusChangedEvent
+                            .getSource().getLocationDataSource().getError().getMessage());
+                    Toast.makeText(MainActivity.this, "Habilitar el GPS", Toast.LENGTH_LONG).show();
+
+                    //System.out.println("ERROR: " + message);
+
+                    // Update UI to reflect that the location display did not actually start
+                    mSpinner.setSelection(0, true);
+                }
+            }
+        });
+
+        // Get the Spinner from layout
+        mSpinner = (Spinner) findViewById(R.id.spinner);
+
+        // Populate the list for the Location display options for the spinner's Adapter
+        ArrayList<ItemData> list = new ArrayList<>();
+        list.add(new ItemData("GPS Apagado", R.drawable.locationdisplaydisabled));
+        list.add(new ItemData("GPS Iniciar", R.drawable.locationdisplayon));
+        //list.add(new ItemData("Re-Center", R.drawable.locationdisplayrecenter));
+        list.add(new ItemData("Mi Ubicación", R.drawable.locationdisplayrecenter));
+        //list.add(new ItemData("Compass", R.drawable.locationdisplayheading));
+
+        SpinnerAdapter adapter = new SpinnerAdapter(this, R.layout.spinner_layout, R.id.txt, list);
+        mSpinner.setAdapter(adapter);
+        mSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+
+                switch (position) {
+                    case 0:
+                        // Stop Location Display
+                        if (mLocationDisplay.isStarted())
+                            mLocationDisplay.stop();
+
+                        break;
+                    case 1:
+                        // Start Location Display
+                        if (!mLocationDisplay.isStarted())
+                            mLocationDisplay.startAsync();
+
+                        break;
+                    case 2:
+                        // Re-Center MapView on Location
+                        // AutoPanMode - Default: In this mode, the MapView attempts to keep the location symbol on-screen by
+                        // re-centering the location symbol when the symbol moves outside a "wander extent". The location symbol
+                        // may move freely within the wander extent, but as soon as the symbol exits the wander extent, the MapView
+                        // re-centers the map on the symbol.
+                        mLocationDisplay.setAutoPanMode(LocationDisplay.AutoPanMode.RECENTER);
+                        if (!mLocationDisplay.isStarted())
+                            mLocationDisplay.startAsync();
+
+                        break;
+                    case 3:
+                        // Start Navigation Mode
+                        // This mode is best suited for in-vehicle navigation.
+                        /*mLocationDisplay.setAutoPanMode(LocationDisplay.AutoPanMode.NAVIGATION);
+                        if (!mLocationDisplay.isStarted())
+                            mLocationDisplay.startAsync();*/
+                        break;
+                    case 4:
+                        // Start Compass Mode
+                        // This mode is better suited for waypoint navigation when the user is walking.
+                        /*mLocationDisplay.setAutoPanMode(LocationDisplay.AutoPanMode.COMPASS_NAVIGATION);
+                        if (!mLocationDisplay.isStarted())
+                            mLocationDisplay.startAsync();*/
+                        break;
+                }
+
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) { }
+
+        });
+
+
+        //
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
-        mFabResultados = findViewById(R.id.resultados);
-        mFabResultados.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                ResultadosActivity activity = new ResultadosActivity(mResultados, mFeatures);
-                activity.show(getSupportFragmentManager(), ResultadosActivity.TAG);
-            }
-        });
-
-        mFabRegistrarHito = findViewById(R.id.registrar_hito);
-        mFabRegistrarHito.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                RegistrarHitoActivity activity = new RegistrarHitoActivity(mFeatureProyecto);
-                activity.show(getSupportFragmentManager(), RegistrarHitoActivity.TAG);
-            }
-        });
 
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -391,7 +494,7 @@ public class MainActivity extends AppCompatActivity {
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
         mAppBarConfiguration = new AppBarConfiguration.Builder(
-                R.id.nav_home, R.id.nav_share, R.id.nav_send, R.id.nav_tools) //R.id.nav_gallery, R.id.nav_slideshow, R.id.nav_tools
+                R.id.nav_home, R.id.nav_share) //R.id.nav_gallery, R.id.nav_slideshow, R.id.nav_tools, R.id.nav_send, R.id.nav_tools
                 .setDrawerLayout(drawer)
                 .build();
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment);
@@ -399,36 +502,76 @@ public class MainActivity extends AppCompatActivity {
         NavigationUI.setupWithNavController(navigationView, navController);
     }
 
-    /**
-     * Create Features from Layers in the Map
+    /*
      *
-     * @param map ArcGISMap to get Layers and Tables
      */
-    private void createFeatures(ArcGISMap map) {
-        LayerList layers = map.getOperationalLayers();
-        // add the National Parks Feature layer to LayerList
-        for (Layer layer : layers) {
-            FeatureLayer fLayer = (FeatureLayer) layer;
-            System.out.println("*** fLayer " + fLayer.getName());
-            mOperationalLayers.add(fLayer);
-        }
+    private void cargarRutas(String consultaSector) {
+        // Get the Spinner from layout
+        mSpinnerRutas = (Spinner) findViewById(R.id.spinner_rutas);
+
+        // Populate the list for the Location display options for the spinner's Adapter
+        ArrayList<ItemData> list = new ArrayList<>();
+        list.add(new ItemData("Rutas 1 y 2", R.drawable.ic_rutas_todas_24));
+        list.add(new ItemData("Ruta 1", R.drawable.ic_ruta_1_24));
+        list.add(new ItemData("Ruta 2", R.drawable.ic_ruta_2_24));
+
+        SpinnerAdapter adapter = new SpinnerAdapter(this, R.layout.spinner_layout_rutas, R.id.txt, list);
+        mSpinnerRutas.setAdapter(adapter);
+        mSpinnerRutas.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                FeatureLayer ruteoPriLayer = getmOperationalLayers().get(7);
+                FeatureLayer ruteoSecLayer = getmOperationalLayers().get(8);
+                FeatureLayer paradasLayer = getmOperationalLayers().get(9);
+
+                switch (position) {
+                    case 0:
+                        ruteoPriLayer.setDefinitionExpression(consultaSector + " AND CAMION > 0");
+                        ruteoSecLayer.setDefinitionExpression(consultaSector + " AND CAMION > 0");
+                        paradasLayer.setDefinitionExpression(consultaSector + " AND CAMION > 0");
+
+                        break;
+                    case 1:
+                        ruteoPriLayer.setDefinitionExpression(consultaSector + "AND CAMION = 1");
+                        ruteoSecLayer.setDefinitionExpression(consultaSector + "AND CAMION = 1");
+                        paradasLayer.setDefinitionExpression(consultaSector + "AND CAMION = 1");
+
+                        break;
+                    case 2:
+                        ruteoPriLayer.setDefinitionExpression(consultaSector + "AND CAMION = 2");
+                        ruteoSecLayer.setDefinitionExpression(consultaSector + "AND CAMION = 2");
+                        paradasLayer.setDefinitionExpression(consultaSector + "AND CAMION = 2");
+
+                        break;
+                }
+
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) { }
+
+        });
+
+        mSpinnerRutas.setVisibility(View.VISIBLE);
     }
 
     /*
      *
      */
-    private void seleccionarObra(MotionEvent e){
+    @SuppressLint("RestrictedApi")
+    private void seleccionarManzana(MotionEvent e) {
         // get the point that was clicked and convert it to a point in map coordinates
         mClickPoint = new android.graphics.Point((int) e.getX(), (int) e.getY());
 
+        final FeatureLayer manzanasLayer = getmOperationalLayers().get(5);
+
         // clear any previous selection
-        mFeatureLayerObra.clearSelection();
+        manzanasLayer.clearSelection();
         mSelectedArcGISFeature = null;
-        mCallout.dismiss();
 
         // identify the GeoElements in the given layer
         final ListenableFuture<IdentifyLayerResult> identifyFuture = mMapView
-                .identifyLayerAsync(mFeatureLayerObra, mClickPoint, 5, false, 1);
+                .identifyLayerAsync(manzanasLayer, mClickPoint, 5, false, 1);
 
         // add done loading listener to fire when the selection returns
         identifyFuture.addDoneListener(new Runnable() {
@@ -441,53 +584,39 @@ public class MainActivity extends AppCompatActivity {
                     if (!resultGeoElements.isEmpty()) {
                         if (resultGeoElements.get(0) instanceof ArcGISFeature) {
                             mSelectedArcGISFeature = (ArcGISFeature) resultGeoElements.get(0);
-                            ///
-                            ArcGISFeatureTable selectedTable = (ArcGISFeatureTable) mSelectedArcGISFeature.getFeatureTable();
-                            System.out.println("************* " + selectedTable.getRelatedTables().size());
-                            final ListenableFuture<List<RelatedFeatureQueryResult>> relatedFeatureQueryResultFuture = selectedTable
-                                    .queryRelatedFeaturesAsync(mSelectedArcGISFeature);
-                            relatedFeatureQueryResultFuture.addDoneListener(() -> {
-                                try {
-                                    List<RelatedFeatureQueryResult> relatedFeatureQueryResultList = relatedFeatureQueryResultFuture
-                                            .get();
-                                    // iterate over returned RelatedFeatureQueryResults
-                                    for (RelatedFeatureQueryResult relatedQueryResult : relatedFeatureQueryResultList) {
-                                        // add Table Name to List
-                                        String relatedTableName = relatedQueryResult.getRelatedTable().getTableName();
-                                        System.out.println("************* " + relatedTableName);
-                                        // iterate over Features returned
-                                        for (Feature relatedFeature : relatedQueryResult) {
-                                            // get the Display field to use as filter on related attributes
-                                            ArcGISFeature agsFeature = (ArcGISFeature) relatedFeature;
-                                            String displayFieldName = agsFeature.getFeatureTable().getLayerInfo().getDisplayFieldName();
-                                            String displayFieldValue = agsFeature.getAttributes().get(displayFieldName).toString();
-                                            System.out.println("************* " + displayFieldName);
-                                            System.out.println("************* " + displayFieldValue);
-                                        }
-                                    }
-                                } catch (InterruptedException | ExecutionException e) {
-                                    String error = "Error getting related feature query result: " + e.getMessage();
-                                    Toast.makeText(getmMapView().getContext(), error, Toast.LENGTH_LONG).show();
-                                    Log.e(TAG, error);
-                                }
-                            });
-                            ///
+
                             // highlight the selected feature
-                            mFeatureLayerObra.selectFeature(mSelectedArcGISFeature);
+                            manzanasLayer.selectFeature(mSelectedArcGISFeature);
 
-                            String Nom_Proyecto = (String) mSelectedArcGISFeature.getAttributes()
-                                    .get("Nom_Proyecto");
+                            int oidManzana = (int) mSelectedArcGISFeature.getAttributes()
+                                    .get("OBJECTID");
 
-                            String estado = (String) mSelectedArcGISFeature.getAttributes()
-                                    .get("DescrProyecto");
+                            //System.out.println("*** oidManzana: " + String.valueOf(oidManzana));
 
-                            showCallout(Nom_Proyecto, estado);
+                            AlertDialog.Builder alerta = new AlertDialog.Builder(mMapView.getContext())
+                                    .setIcon(android.R.drawable.ic_dialog_alert)
+                                    .setTitle("Advertencia")
+                                    .setMessage("¿Desea cambiar el estado de la manzana a TERMINADA?")
+                                    .setPositiveButton("Si", new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialogInterface, int i) {
+                                            editarManzana(mSelectedArcGISFeature);
+                                        }
+                                    })
+                                    .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialogInterface, int i) {
+                                            //Toast.makeText(getApplicationContext(),"Nothing Happens",Toast.LENGTH_LONG).show();
+                                        }
+                                    });
+
+                            mDialog = alerta.show();
 
                             mMapView.setViewpointCenterAsync(mMapPoint);
                         }
                     } else {
                         // none of the features on the map were selected
-                        mCallout.dismiss();
+                        Toast.makeText(mMapView.getContext(), "No se encontraron manzanas en el punto seleccionado", Toast.LENGTH_LONG).show();
                     }
                 } catch (Exception e) {
                     Log.e(TAG, "Select feature failed: " + e.getMessage());
@@ -496,115 +625,98 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void closeDialog()
+    {
+        if(mDialog != null) mDialog.dismiss();
+        mProgressDialog.dismiss();
+    }
+
     /**
-     * Displays Callout
+     *
+     * @param feature
+     */
+    public void editarManzana(ArcGISFeature feature){
+
+        try
+        {
+
+
+            mProgressDialog.setMessage("Actualizando estado...");
+            mProgressDialog.show();
+
+            feature.getAttributes().put("Estado", 1);
+
+            ServiceFeatureTable mServiceFeatureTableEncuesta = new ServiceFeatureTable(getString(R.string.manzanas_service_url));
+            mServiceFeatureTableEncuesta.setFeatureRequestMode(ServiceFeatureTable.FeatureRequestMode.ON_INTERACTION_CACHE);
+            // update the feature in the table new Feature
+            mServiceFeatureTableEncuesta.updateFeatureAsync(feature).get();
+            // if dealing with ServiceFeatureTable, apply edits after making updates; if editing locally, then edits can
+            // be synchronized at some point using the SyncGeodatabaseTask.
+            if (mServiceFeatureTableEncuesta instanceof ServiceFeatureTable) {
+                ServiceFeatureTable serviceFeatureTable = (ServiceFeatureTable) mServiceFeatureTableEncuesta;
+
+                // can call getUpdatedFeaturesCountAsync to verify number of updates to be applied before calling applyEditsAsync
+                final List<FeatureEditResult> featureEditResults = serviceFeatureTable.applyEditsAsync().get();
+            }
+
+            // if required, can check the edits applied in this operation by using returned FeatureEditResult
+
+            Toast.makeText(mMapView.getContext(), "Manzana actualizada", Toast.LENGTH_LONG).show();
+            getmMapView().setViewpointGeometryAsync(feature.getGeometry().getExtent(), 20);
+
+            closeDialog();
+        }
+        catch(Exception ex){
+            String msg = ex.getMessage();
+            //System.out.println("********** " + msg);
+        }
+
+
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        // If request is cancelled, the result arrays are empty.
+        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            // Location permission was granted. This would have been triggered in response to failing to start the
+            // LocationDisplay, so try starting this again.
+            mLocationDisplay.startAsync();
+        } else {
+            // If permission was denied, show toast to inform user what was chosen. If LocationDisplay is started again,
+            // request permission UX will be shown again, option should be shown to allow never showing the UX again.
+            // Alternative would be to disable functionality so request is not shown again.
+            Toast.makeText(MainActivity.this, getResources().getString(R.string.location_permission_denied), Toast
+                    .LENGTH_SHORT).show();
+
+            // Update UI to reflect that the location display did not actually start
+            mSpinner.setSelection(0, true);
+        }
+    }
+
+    /**
+     * Create Features from Layers in the Map
+     *
+     * @param map ArcGISMap to get Layers and Tables
+     */
+    private void createFeatures(ArcGISMap map) {
+        LayerList layers = map.getOperationalLayers();
+        // add the National Parks Feature layer to LayerList
+        for (Layer layer : layers) {
+            FeatureLayer fLayer = (FeatureLayer) layer;
+            fLayer.setDefinitionExpression("OBJECTID < 0");
+            //System.out.println("*** fLayer " + fLayer.getName());
+            mOperationalLayers.add(fLayer);
+        }
+    }
+
+    /**
      *
      */
-    private void showCallout(String nombre, String estado) {
+    public void acercarSector(Feature feature, String consultaSector) {
+        util.mostrarDialogoInfoMsg(getString(R.string.msg_info_manzana), getmMapView());
+        getmMapView().setViewpointGeometryAsync(feature.getGeometry().getExtent(), 10);
 
-        // create a text view for the callout
-        /*RelativeLayout calloutLayout = new RelativeLayout(getApplicationContext());
-
-        TextView calloutContent = new TextView(getApplicationContext());
-        calloutContent.setId(R.id.textview);
-        calloutContent.setTextColor(Color.BLACK);
-        calloutContent.setTextSize(18);
-        calloutContent.setPadding(0, 10, 10, 10);
-
-        calloutContent.setText(title);
-
-        RelativeLayout.LayoutParams relativeParams = new RelativeLayout.LayoutParams(
-                RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
-        relativeParams.addRule(RelativeLayout.RIGHT_OF, calloutContent.getId());
-
-        // create image view for the callout
-        ImageView imageView = new ImageView(getApplicationContext());
-        imageView
-                .setImageDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.ic_info_outline_black_18dp));
-        imageView.setLayoutParams(relativeParams);
-        imageView.setOnClickListener(new ImageViewOnclickListener());
-
-        calloutLayout.addView(calloutContent);
-        calloutLayout.addView(imageView);
-
-        mCallout.setGeoElement(mSelectedArcGISFeature, null);
-        mCallout.setContent(calloutLayout);
-        mCallout.show();*/
-
-        View calloutView = mInflater.inflate(R.layout.callout, null);
-
-        LinearLayout cont_nombre = (LinearLayout) calloutView.findViewById(R.id.cont_nombre);
-        LinearLayout cont_estado = (LinearLayout) calloutView.findViewById(R.id.cont_estado);
-
-        //Access the internal Textviews inside the calloutView.
-        TextView callout_nombre = (TextView) calloutView.findViewById(R.id.callout_nombre);
-        TextView callout_estado = (TextView) calloutView.findViewById(R.id.callout_estado);
-
-        cont_nombre.setVisibility(LinearLayout.VISIBLE);
-        cont_estado.setVisibility(LinearLayout.VISIBLE);
-
-        //Set Up values
-        callout_nombre.setText(nombre);
-        callout_nombre.setEnabled(true);
-
-        callout_estado.setText(estado);
-        callout_estado.setEnabled(true);
-
-        mCallout.setGeoElement(mSelectedArcGISFeature, null);
-        //Set the content, show the view
-        mCallout.setContent(calloutView);
-        //mCallout.setStyle(R.layout.activity_encuesta);
-        mCallout.refresh();
-        mCallout.show();
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.N)
-    public void setResultados(Feature[] features){
-        mFeatures = new Feature[features.length];
-        mFeatures = features;
-
-        ArrayList<String> listaResultados = new ArrayList<String>();
-        String reg = "";
-
-        ArrayList<String> listaCamposNoVisibles = new ArrayList<String>();
-        listaCamposNoVisibles.add("Shape__Area");
-        listaCamposNoVisibles.add("Shape__Length");
-        listaCamposNoVisibles.add("OBJECTID");
-        listaCamposNoVisibles.add("Dependencia");
-        listaCamposNoVisibles.add("DireccionProyecto");
-        listaCamposNoVisibles.add("ID_Obra_1");
-        listaCamposNoVisibles.add("ID_Sector");
-        listaCamposNoVisibles.add("Programa");
-        listaCamposNoVisibles.add("ObjProyecto");
-        listaCamposNoVisibles.add("DurProyecto");
-        listaCamposNoVisibles.add("Responsable");
-        listaCamposNoVisibles.add("Dependencia");
-        listaCamposNoVisibles.add("Nombre_Contratista");
-        listaCamposNoVisibles.add("ID_Localidad");
-        listaCamposNoVisibles.add("Intervencion");
-
-        for (Feature feat : features) {
-            // create a Map of all available attributes as name value pairs
-            Map<String, Object> attr = feat.getAttributes();
-            Set<String> keys = attr.keySet();
-            reg = "";
-
-            for (String key : keys) {
-                Object value = attr.get(key);
-
-                if(!listaCamposNoVisibles.contains(key)){
-                    reg += key + ": " + value + "\n";
-                }
-            }
-            listaResultados.add(reg);
-        }
-        mResultados = (String[]) listaResultados.toArray(new String[listaResultados.size()]);
-    }
-
-    @SuppressLint("RestrictedApi")
-    public void setProyecto(Feature feature){
-        mFeatureProyecto = feature;
-        this.getmFabRegistrarHito().setVisibility(View.VISIBLE);
+        cargarRutas(consultaSector);
     }
 
     @Override

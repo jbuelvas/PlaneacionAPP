@@ -26,17 +26,17 @@
         <menu>
             <item
                 android:id="@+id/nav_share"
-                android:icon="@mipmap/location"
-                android:title="@string/menu_fase"
+                android:icon="@mipmap/ic_bn_country_64"
+                android:title="@string/menu_localidades"
             />
-            <item
+            <!--item
                 android:id="@+id/nav_send"
                 android:icon="@mipmap/location"
                 android:title="@string/menu_estado" />
             <item
                 android:id="@+id/nav_tools"
                 android:icon="@mipmap/location"
-                android:title="@string/menu_cerca" />
+                android:title="@string/menu_cerca" /-->
         </menu>
     </item>
 

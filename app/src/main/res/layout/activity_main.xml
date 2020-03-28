@@ -26,32 +26,36 @@
         android:paddingRight="0dp"
         android:paddingTop="55dp">
 
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/registrar_hito"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="bottom|end"
-            android:layout_marginBottom="80dp"
-            android:layout_marginRight="@dimen/fab_margin"
-            android:visibility="gone"
-            app:backgroundTint="#4CAF50"
-            app:srcCompat="@mipmap/ic_edit_64" />
-
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/resultados"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="bottom|end"
-            android:layout_margin="@dimen/fab_margin"
-            android:visibility="gone"
-            app:backgroundTint="#4CAF50"
-            app:srcCompat="@mipmap/ic_list_64" />
-
         <com.esri.arcgisruntime.mapping.view.MapView
             android:id="@+id/mapView"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
         </com.esri.arcgisruntime.mapping.view.MapView>
+
+        <Spinner
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/spinner"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentEnd="true"
+            android:layout_gravity="top|end"
+            android:layout_margin="10dp"
+            android:background="#00000000"
+            android:popupBackground="#00000000"
+            android:overlapAnchor="false"/>
+
+        <Spinner
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/spinner_rutas"
+            android:visibility="gone"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentEnd="true"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="10dp"
+            android:background="#00000000"
+            android:popupBackground="#00000000"
+            android:overlapAnchor="false"/>
     </FrameLayout>
 
     <com.google.android.material.navigation.NavigationView
